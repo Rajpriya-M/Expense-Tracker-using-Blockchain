@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Expense Tracker</title>
+    <!-- Bootstrap for responsive and attractive UI -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Chart.js for expense visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.6.1/dist/web3.min.js"></script>
+    <style>
+        body {
+            background-color: #f4f4f9;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            margin-top: 50px;
+        }
+        h1, h3 {
+            text-align: center;
+            color: #333;
+        }
+        .expense-form, .expense-list {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .expense-form input, .expense-form button {
+            margin-top: 10px;
+        }
+        #expenseChart {
+            max-width: 100%;
+            height: 400px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Blockchain Expense Tracker</h1>
+
+    <!-- Expense Recording Form -->
+    <div class="expense-form">
+        <h3>Record an Expense</h3>
+        <form id="expenseForm">
+            <div class="mb-3">
+                <label for="amount" class="form-label">Amount:</label>
+                <input type="number" id="amount" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="category" class="form-label">Category:</label>
+                <input type="text" id="category" class="form-control" required>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="recordExpense()">Record Expense</button>
+        </form>
+    </div>
+
+    <hr>
+
+    <!-- Analytics and Chart -->
+    <div class="expense-list">
+        <h3>Expense Analytics</h3>
+        <div class="row">
+            <div class="col-md-6">
+                <canvas id="expenseChart"></canvas>
+            </div>
+            <div class="col-md-6">
+                <ul id="expenseList" class="list-group">
+                    <li class="list-group-item">Loading expenses...</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let web3;
+    let contract;
+    const contractAddress = '0x4c879690a2d15db78c65a51826db9befda4b4a47'; // Replace with your deployed contract address
+    const contractABI = [
+        {
+            "inputs": [
+                { "internalType": "uint256", "name": "_amount", "type": "uint256" },
+                { "internalType": "string", "name": "_category", "type": "string" }
+            ],
+            "name": "recordExpense",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "getExpenses",
+            "outputs": [
+                {
+                    "components": [
+                        { "internalType": "uint256", "name": "amount", "type": "uint256" },
+                        { "internalType": "string", "name": "category", "type": "string" },
+                        { "internalType": "uint256", "name": "timestamp", "type": "uint256" }
+                    ],
+                    "internalType": "struct ExpenseTracker.Expense[]",
+                    "name": "",
+                    "type": "tuple[]"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        }
+    ];
+
+    // Initialize Web3 and contract
+    async function init() {
+        if (typeof window.ethereum !== 'undefined') {
+            web3 = new Web3(window.ethereum);
+            await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+            contract = new web3.eth.Contract(contractABI, contractAddress);
+            fetchExpenses();  // Load expenses on page load
+        } else {
+            alert("Please install MetaMask!");
+        }
+    }
+
+    // Record an expense
+    async function recordExpense() {
+        const amount = document.getElementById('amount').value;
+        const category = document.getElementById('category').value;
+
+        const accounts = await web3.eth.getAccounts();
+        await contract.methods.recordExpense(amount, category).send({ from: accounts[0] });
+
+        alert('Expense recorded!');
+        fetchExpenses(); // Refresh expenses after recording
+    }
+
+    // Fetch and display expenses, and update chart
+    async function fetchExpenses() {
+        const expenses = await contract.methods.getExpenses().call();
+        const expenseList = document.getElementById('expenseList');
+        const categories = {};
+        let totalAmount = 0;
+
+        expenseList.innerHTML = ''; // Clear the list
+
+        expenses.forEach(expense => {
+            const listItem = document.createElement('li');
+            listItem.className = 'list-group-item';
+            listItem.textContent = `Amount: ${expense.amount} | Category: ${expense.category} | Date: ${new Date(expense.timestamp * 1000).toLocaleString()}`;
+            expenseList.appendChild(listItem);
+
+            // Aggregate expenses by category
+            if (!categories[expense.category]) {
+                categories[expense.category] = 0;
+            }
+            categories[expense.category] += parseFloat(expense.amount);
+            totalAmount += parseFloat(expense.amount);
+        });
+
+        updateChart(categories);
+        updateAnalytics(totalAmount, categories);
+    }
+
+    // Update the chart with spending data
+    function updateChart(categories) {
+        const labels = Object.keys(categories);
+        const data = Object.values(categories);
+
+        const ctx = document.getElementById('expenseChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Expenses by Category',
+                    data: data,
+                    backgroundColor: ['#FF6F61', '#4CAF50', '#FFEB3B', '#2196F3', '#9C27B0'],
+                    hoverOffset: 4
+                }]
+            }
+        });
+    }
+
+    // Update the total and category breakdown
+    function updateAnalytics(totalAmount, categories) {
+        const expenseAnalytics = document.getElementById('expenseList');
+        expenseAnalytics.innerHTML += `<li class="list-group-item">Total Expenses: $${totalAmount.toFixed(2)}</li>`;
+        for (const category in categories) {
+            expenseAnalytics.innerHTML += `<li class="list-group-item">${category}: $${categories[category].toFixed(2)}</li>`;
+        }
+    }
+
+    // Initialize app
+    init();
+</script>
+</body>
+</html>
