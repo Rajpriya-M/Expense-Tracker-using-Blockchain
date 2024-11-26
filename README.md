@@ -3,7 +3,11 @@
 A web application that uses blockchain technology to track expenses securely and transparently. This project integrates a Solidity smart contract with a web-based frontend for recording, visualizing, and analyzing expenses. 
 
 ---
+# Live Demo
 
+You can try the live demo of the project here:
+
+[Expense Tracker - Live Demo](https://expense-tracker-using-blockchain-fcai.vercel.app/)
 ## Features
 
 - **Blockchain-Powered Tracking**: Records expenses on the Ethereum blockchain for immutability and transparency.
