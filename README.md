@@ -66,7 +66,7 @@ The HTML/CSS frontend integrates with the smart contract via Web3.js, allowing u
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/yourusername/Expense-Tracker-using-Blockchain.git
+   git clone https://github.com/Rajpriya-M/Expense-Tracker-using-Blockchain
    cd Expense-Tracker-using-Blockchain
 Acknowledgments
 Special thanks to the developers of:
