@@ -39,7 +39,7 @@
 <body>
 
 <div class="container">
-    <h1>Blockchain Expense Tracker</h1>
+    <h1>Expense Tracker using Blockchain</h1>
 
     <!-- Expense Recording Form -->
     <div class="expense-form">
@@ -90,37 +90,141 @@
     let web3;
     let contract;
     let expenseChart; // Global variable to store the Chart.js instance
-    const contractAddress = '0x4c879690a2d15db78c65a51826db9befda4b4a47'; // Replace with deployed contract address
+    const contractAddress = '0xe40be865664c959df1942452a9d998d6e6080ef1'; // Replace with your deployed contract address
     const contractABI = [
-        {
-            "inputs": [
-                { "internalType": "uint256", "name": "_amount", "type": "uint256" },
-                { "internalType": "string", "name": "_category", "type": "string" }
-            ],
-            "name": "recordExpense",
-            "outputs": [],
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "inputs": [],
-            "name": "getExpenses",
-            "outputs": [
-                {
-                    "components": [
-                        { "internalType": "uint256", "name": "amount", "type": "uint256" },
-                        { "internalType": "string", "name": "category", "type": "string" },
-                        { "internalType": "uint256", "name": "timestamp", "type": "uint256" }
-                    ],
-                    "internalType": "struct ExpenseTracker.Expense[]",
-                    "name": "",
-                    "type": "tuple[]"
-                }
-            ],
-            "stateMutability": "view",
-            "type": "function"
-        }
-    ];
+    {
+        "inputs": [],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "user",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "string",
+                "name": "category",
+                "type": "string"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "timestamp",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "bytes32",
+                "name": "transactionHash",
+                "type": "bytes32"
+            }
+        ],
+        "name": "ExpenseRecorded",
+        "type": "event"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_amount",
+                "type": "uint256"
+            },
+            {
+                "internalType": "string",
+                "name": "_category",
+                "type": "string"
+            }
+        ],
+        "name": "recordExpense",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "expenses",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+            },
+            {
+                "internalType": "string",
+                "name": "category",
+                "type": "string"
+            },
+            {
+                "internalType": "uint256",
+                "name": "timestamp",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getExpenses",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "string",
+                        "name": "category",
+                        "type": "string"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "timestamp",
+                        "type": "uint256"
+                    }
+                ],
+                "internalType": "struct ExpenseTracker.Expense[]",
+                "name": "",
+                "type": "tuple[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "owner",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    }
+];
 
     // Initialize Web3 and contract
     async function init() {
@@ -147,12 +251,28 @@
 
         const accounts = await web3.eth.getAccounts();
         try {
-            await contract.methods.recordExpense(amount, category).send({ from: accounts[0] });
-            alert('Expense recorded!');
+            // Send the transaction to the smart contract
+            const tx = await contract.methods.recordExpense(amount, category).send({ from: accounts[0] });
+
+            // Display the transaction hash along with the timestamp
+            const transactionHash = tx.transactionHash; // Get the transaction hash
+            const timestamp = new Date().toLocaleString(); // Get the timestamp of when the expense is recorded
+
+            alert('Expense recorded! Transaction Hash: ' + transactionHash);
+            displayTransactionHash(transactionHash, timestamp); // Display the hash and timestamp
             fetchExpenses(); // Refresh expenses after recording
         } catch (error) {
             console.error("Error recording expense:", error);
         }
+    }
+
+    // Function to display transaction hash and timestamp
+    function displayTransactionHash(transactionHash, timestamp) {
+        const transactionList = document.getElementById('expenseList');
+        const listItem = document.createElement('li');
+        listItem.className = 'list-group-item';
+        listItem.innerHTML = `Transaction Hash: <a href="https://etherscan.io/tx/${transactionHash}" target="_blank">${transactionHash}</a> | Timestamp: ${timestamp}`;
+        transactionList.appendChild(listItem);
     }
 
     // Fetch and display expenses, and update chart
